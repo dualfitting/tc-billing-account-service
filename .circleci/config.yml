@@ -1,0 +1,52 @@
+version: 2
+defaults: &defaults
+  docker:
+    - image: circleci/openjdk:8-jdk
+
+install_awscli: &install_awscli
+  name: "Install awscli"
+  command: |
+    sudo pip install awscli awsebcli
+    aws --version
+    eb --version
+  
+
+jobs:
+  build:
+    steps:
+      - checkout
+      - cd service && mvn clean package integration-test
+
+  deploy_prod:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: *install_awscli
+      - setup_remote_docker
+      - run: .deploy/ebs_deploy.sh tc-billing-account-service PROD $CIRCLE_BUILD_NUM
+
+  deploy_dev:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: *install_awscli
+      - setup_remote_docker
+      - run: .deploy/ebs_deploy.sh tc-billing-account-service DEV $CIRCLE_BUILD_NUM
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build
+      - deploy_dev:
+          filters:
+            branches:
+              only: dev
+          requires:
+            - build
+      - deploy_prod:
+          filters:
+            branches:
+              only: master
+          requires:
+            - build
