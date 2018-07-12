@@ -1,13 +1,15 @@
 version: 2
-defaults: &defaults
+java_env: &java_env
   docker:
     - image: circleci/openjdk:8-jdk
+
+python_env: &python_env
+  docker:
+    - image: circleci/python:2.7-stretch-browsers
 
 install_awscli: &install_awscli
   name: "Install awscli"
   command: |
-    sudo apt-get update
-    sudo apt-get install python-pip
     sudo pip install awscli awsebcli
     aws --version
     eb --version
@@ -18,13 +20,11 @@ deploy_steps: &deploy_steps
       at: .
   - run: *install_awscli
   - setup_remote_docker
-  - run: ls
-  - run: find ./service/target
   - run: .deploy/ebs_deploy.sh tc-billing-account-service $DEPLOY_ENV $CIRCLE_BUILD_NUM
 
 jobs:
   build:
-    <<: *defaults
+    <<: *java_env
     steps:
       - checkout
       - run: cd service && mvn clean package integration-test
@@ -34,13 +34,13 @@ jobs:
             - ./service/target
 
   deploy_prod:
-    <<: *defaults
+    <<: *python_env
     environment:
       DEPLOY_ENV: "PROD"
     steps: *deploy_steps
 
   deploy_dev:
-    <<: *defaults
+    <<: *python_env
     environment:
       DEPLOY_ENV: "DEV"
     steps: *deploy_steps
