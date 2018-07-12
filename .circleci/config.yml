@@ -6,6 +6,8 @@ defaults: &defaults
 install_awscli: &install_awscli
   name: "Install awscli"
   command: |
+    sudo apt-get update
+    sudo apt-get install python-pip
     sudo pip install awscli awsebcli
     aws --version
     eb --version
