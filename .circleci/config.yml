@@ -13,6 +13,7 @@ install_awscli: &install_awscli
 
 jobs:
   build:
+    <<: *defaults
     steps:
       - checkout
       - cd service && mvn clean package integration-test
