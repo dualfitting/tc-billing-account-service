@@ -10,29 +10,39 @@ install_awscli: &install_awscli
     aws --version
     eb --version
   
+deploy_steps: &deploy_steps
+  - checkout
+  - attach_workspace:
+      at: .
+  - run: *install_awscli
+  - setup_remote_docker
+  - run: ls
+  - run: find ./service/target
+  - run: .deploy/ebs_deploy.sh tc-billing-account-service $DEPLOY_ENV $CIRCLE_BUILD_NUM
 
 jobs:
   build:
     <<: *defaults
     steps:
       - checkout
-      - cd service && mvn clean package integration-test
+      - run: cd service && mvn clean package integration-test
+      - persist_to_workspace:
+          root: .
+          paths:
+            - ./service/target
 
   deploy_prod:
     <<: *defaults
-    steps:
-      - checkout
-      - run: *install_awscli
-      - setup_remote_docker
-      - run: .deploy/ebs_deploy.sh tc-billing-account-service PROD $CIRCLE_BUILD_NUM
+    environment:
+      DEPLOY_ENV: "PROD"
+    steps: *deploy_steps
 
   deploy_dev:
     <<: *defaults
-    steps:
-      - checkout
-      - run: *install_awscli
-      - setup_remote_docker
-      - run: .deploy/ebs_deploy.sh tc-billing-account-service DEV $CIRCLE_BUILD_NUM
+    environment:
+      DEPLOY_ENV: "DEV"
+    steps: *deploy_steps
+      
 
 workflows:
   version: 2
